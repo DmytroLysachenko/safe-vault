@@ -1,0 +1,6 @@
+<Project>
+  <PropertyGroup>
+    <BaseIntermediateOutputPath Condition="'$(MSBuildProjectName)' == 'safe-vault.Tests'">obj\safe-vault.Tests\</BaseIntermediateOutputPath>
+    <BaseOutputPath Condition="'$(MSBuildProjectName)' == 'safe-vault.Tests'">bin\safe-vault.Tests\</BaseOutputPath>
+  </PropertyGroup>
+</Project>

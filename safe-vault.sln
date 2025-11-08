@@ -1,0 +1,30 @@
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.5.2.0
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "safe-vault", "safe-vault.csproj", "{4D10F132-1538-1804-E4C2-185617CD9A65}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "safe-vault.Tests", "safe-vault.Tests.csproj", "{AC554570-E861-8BB7-1D89-CD32B3E1F919}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{4D10F132-1538-1804-E4C2-185617CD9A65}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4D10F132-1538-1804-E4C2-185617CD9A65}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4D10F132-1538-1804-E4C2-185617CD9A65}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4D10F132-1538-1804-E4C2-185617CD9A65}.Release|Any CPU.Build.0 = Release|Any CPU
+		{AC554570-E861-8BB7-1D89-CD32B3E1F919}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{AC554570-E861-8BB7-1D89-CD32B3E1F919}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{AC554570-E861-8BB7-1D89-CD32B3E1F919}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{AC554570-E861-8BB7-1D89-CD32B3E1F919}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {0E37CB03-39BD-4242-B3DE-975B5DAFFDB0}
+	EndGlobalSection
+EndGlobal
