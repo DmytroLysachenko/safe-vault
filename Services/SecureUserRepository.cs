@@ -6,7 +6,7 @@ namespace SafeVault.Services;
 
 public interface ISecureUserRepository
 {
-    Task<UserRecord?> GetUserByCredentialsAsync(string username, byte[] passwordHash);
+    Task<UserCredentials?> GetUserCredentialsAsync(string username);
     Task<DataTable> SearchUsersByUsernameAsync(string searchTerm);
 }
 
@@ -20,35 +20,36 @@ public sealed class SecureUserRepository : ISecureUserRepository
             connectionString ?? throw new ArgumentNullException(nameof(connectionString));
     }
 
-    public async Task<UserRecord?> GetUserByCredentialsAsync(string username, byte[] passwordHash)
+    public async Task<UserCredentials?> GetUserCredentialsAsync(string username)
     {
         using var connection = new SqlConnection(_connectionString);
         await connection.OpenAsync().ConfigureAwait(false);
 
         using var command = new SqlCommand(
             """
-            SELECT UserID, Username, Email, CreatedAt
+            SELECT UserID, Username, Email, CreatedAt, PasswordHash
             FROM Users
             WHERE Username = @Username
-              AND PasswordHash = @PasswordHash
             """,
             connection
         );
 
         command.Parameters.Add("@Username", SqlDbType.NVarChar, 100).Value = username;
-        command.Parameters.Add("@PasswordHash", SqlDbType.VarBinary, 256).Value = passwordHash;
 
         using var reader = await command
             .ExecuteReaderAsync(CommandBehavior.SingleRow)
             .ConfigureAwait(false);
         if (await reader.ReadAsync().ConfigureAwait(false))
         {
-            return new UserRecord(
+            var user = new UserRecord(
                 reader.GetInt32(reader.GetOrdinal("UserID")),
                 reader.GetString(reader.GetOrdinal("Username")),
                 reader.GetString(reader.GetOrdinal("Email")),
                 reader.GetDateTime(reader.GetOrdinal("CreatedAt"))
             );
+
+            var passwordHash = reader.GetString(reader.GetOrdinal("PasswordHash"));
+            return new UserCredentials(user, passwordHash);
         }
 
         return null;
@@ -84,3 +85,5 @@ public readonly record struct UserRecord(
     string Email,
     DateTime CreatedAt
 );
+
+public sealed record UserCredentials(UserRecord User, string PasswordHash);
