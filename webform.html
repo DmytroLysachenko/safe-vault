@@ -1,0 +1,211 @@
+<!-- webform.html -->
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Secure Sign Up</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        background: #f7f9fb;
+        margin: 0;
+        padding: 2rem;
+        color: #1a202c;
+      }
+
+      form {
+        max-width: 420px;
+        margin: auto;
+        padding: 2rem;
+        background: #ffffff;
+        border-radius: 8px;
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
+      }
+
+      label {
+        display: block;
+        font-weight: 600;
+        margin-bottom: 0.35rem;
+      }
+
+      input {
+        width: 100%;
+        padding: 0.6rem;
+        border: 1px solid #cbd5e0;
+        border-radius: 4px;
+        font-size: 1rem;
+      }
+
+      button {
+        width: 100%;
+        margin-top: 1rem;
+        padding: 0.75rem;
+        font-size: 1rem;
+        font-weight: 600;
+        color: #ffffff;
+        background: #2b6cb0;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+      }
+
+      button:hover {
+        background: #2c5282;
+      }
+
+      .field {
+        margin-bottom: 1.25rem;
+      }
+
+      .error {
+        color: #c53030;
+        font-size: 0.9rem;
+        margin-top: 0.35rem;
+      }
+    </style>
+  </head>
+  <body>
+    <form id="userForm" action="/submit" method="post" novalidate>
+      <h1>Secure Sign Up</h1>
+
+      <div class="field">
+        <label for="username">Username</label>
+        <input
+          type="text"
+          id="username"
+          name="username"
+          minlength="3"
+          maxlength="50"
+          autocomplete="username"
+          required
+          data-sanitize="true"
+        />
+        <div id="usernameError" class="error" hidden></div>
+      </div>
+
+      <div class="field">
+        <label for="email">Email</label>
+        <input
+          type="email"
+          id="email"
+          name="email"
+          maxlength="254"
+          autocomplete="email"
+          required
+          data-sanitize="true"
+        />
+        <div id="emailError" class="error" hidden></div>
+      </div>
+
+      <button type="submit">Submit</button>
+    </form>
+
+    <script>
+      // Reusable sanitizer that strips control characters, script delimiters, and obvious SQL meta tokens.
+      const Sanitizer = (() => {
+        const controlChars = /[\u0000-\u001f\u007f]/g;
+        const tagDelimiters = /[<>]/g;
+        const sqlMeta = /(--|[#*\/\\])/g;
+        const quotesAndSeparators = /["'`;%(){}\[\]|]/g;
+        const reservedSqlKeywords =
+          /\b(SELECT|INSERT|DELETE|UPDATE|DROP|ALTER|EXEC|UNION|CREATE)\b/gi;
+
+        const normalize = (value) => value.normalize("NFKC");
+
+        const sanitizeInput = (rawValue) => {
+          if (!rawValue) {
+            return "";
+          }
+
+          const normalized = normalize(rawValue);
+
+          return normalized
+            .replace(controlChars, "")
+            .replace(tagDelimiters, "")
+            .replace(quotesAndSeparators, "")
+            .replace(sqlMeta, "")
+            .replace(reservedSqlKeywords, "")
+            .replace(/\s{2,}/g, " ")
+            .trim();
+        };
+
+        const sanitizeEmail = (rawValue) => {
+          const sanitized = sanitizeInput(rawValue).replace(/\s+/g, "");
+          const emailPattern =
+            /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i;
+
+          return {
+            value: sanitized,
+            valid: emailPattern.test(sanitized),
+          };
+        };
+
+        return { sanitizeInput, sanitizeEmail };
+      })();
+
+      (() => {
+        const form = document.getElementById("userForm");
+        const usernameField = document.getElementById("username");
+        const emailField = document.getElementById("email");
+        const usernameError = document.getElementById("usernameError");
+        const emailError = document.getElementById("emailError");
+
+        const showError = (node, message) => {
+          node.textContent = message;
+          node.hidden = false;
+        };
+
+        const clearError = (node) => {
+          node.textContent = "";
+          node.hidden = true;
+        };
+
+        form.addEventListener("input", (event) => {
+          if (!event.target.matches('[data-sanitize="true"]')) {
+            return;
+          }
+
+          const sanitized = Sanitizer.sanitizeInput(event.target.value);
+          if (sanitized !== event.target.value) {
+            event.target.value = sanitized;
+          }
+        });
+
+        form.addEventListener("submit", (event) => {
+          clearError(usernameError);
+          clearError(emailError);
+
+          const sanitizedUsername = Sanitizer.sanitizeInput(
+            usernameField.value
+          );
+
+          if (sanitizedUsername.length < 3) {
+            event.preventDefault();
+            showError(
+              usernameError,
+              "Username must be at least 3 characters and cannot contain special symbols."
+            );
+            usernameField.focus();
+            return;
+          }
+
+          usernameField.value = sanitizedUsername;
+
+          const emailResult = Sanitizer.sanitizeEmail(emailField.value);
+
+          if (!emailResult.valid) {
+            event.preventDefault();
+            showError(
+              emailError,
+              "Please provide a valid email address without scripts or control characters."
+            );
+            emailField.focus();
+            return;
+          }
+
+          emailField.value = emailResult.value;
+        });
+      })();
+    </script>
+  </body>
+</html>
