@@ -8,6 +8,7 @@ builder.Services.AddEndpointsApiExplorer();
 
 builder.Services.AddSingleton<IUserSubmissionService, UserSubmissionService>();
 builder.Services.AddScoped<IUserAuthenticationService, UserAuthenticationService>();
+builder.Services.AddScoped<IRoleAuthorizationService, RoleAuthorizationService>();
 builder.Services.AddSingleton<IPasswordHasher>(_ => new BcryptPasswordHasher());
 
 builder.Services.AddScoped<ISecureUserRepository>(_ =>

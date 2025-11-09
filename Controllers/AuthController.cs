@@ -9,10 +9,15 @@ namespace SafeVault.Controllers;
 public class AuthController : ControllerBase
 {
     private readonly IUserAuthenticationService _authenticationService;
+    private readonly IRoleAuthorizationService _roleAuthorizationService;
 
-    public AuthController(IUserAuthenticationService authenticationService)
+    public AuthController(
+        IUserAuthenticationService authenticationService,
+        IRoleAuthorizationService roleAuthorizationService
+    )
     {
         _authenticationService = authenticationService;
+        _roleAuthorizationService = roleAuthorizationService;
     }
 
     [HttpPost("login")]
@@ -40,6 +45,10 @@ public class AuthController : ControllerBase
             return Unauthorized(new { error = "Invalid username or password." });
         }
 
+        var roles = await _roleAuthorizationService
+            .GetRolesAsync(user.Value.Username, cancellationToken)
+            .ConfigureAwait(false);
+
         return Ok(
             new
             {
@@ -47,6 +56,7 @@ public class AuthController : ControllerBase
                 user.UserId,
                 user.Username,
                 user.Email,
+                roles,
             }
         );
     }

@@ -1,4 +1,5 @@
 // Services/SecureUserRepository.cs
+using System.Collections.Generic;
 using System.Data;
 using Microsoft.Data.SqlClient;
 
@@ -8,6 +9,8 @@ public interface ISecureUserRepository
 {
     Task<UserCredentials?> GetUserCredentialsAsync(string username);
     Task<DataTable> SearchUsersByUsernameAsync(string searchTerm);
+    Task<IReadOnlyCollection<string>> GetUserRolesAsync(int userId);
+    Task AssignRoleAsync(int userId, string role);
 }
 
 public sealed class SecureUserRepository : ISecureUserRepository
@@ -49,7 +52,9 @@ public sealed class SecureUserRepository : ISecureUserRepository
             );
 
             var passwordHash = reader.GetString(reader.GetOrdinal("PasswordHash"));
-            return new UserCredentials(user, passwordHash);
+            await reader.CloseAsync().ConfigureAwait(false);
+            var roles = await LoadRolesAsync(connection, user.UserId).ConfigureAwait(false);
+            return new UserCredentials(user, passwordHash, roles);
         }
 
         return null;
@@ -77,6 +82,77 @@ public sealed class SecureUserRepository : ISecureUserRepository
         adapter.Fill(results);
         return results;
     }
+
+    public async Task<IReadOnlyCollection<string>> GetUserRolesAsync(int userId)
+    {
+        using var connection = new SqlConnection(_connectionString);
+        await connection.OpenAsync().ConfigureAwait(false);
+        return await LoadRolesAsync(connection, userId).ConfigureAwait(false);
+    }
+
+    public async Task AssignRoleAsync(int userId, string role)
+    {
+        var normalizedRole = NormalizeRole(role);
+        using var connection = new SqlConnection(_connectionString);
+        await connection.OpenAsync().ConfigureAwait(false);
+
+        using var command = new SqlCommand(
+            """
+            IF NOT EXISTS (
+                SELECT 1
+                FROM UserRoles
+                WHERE UserID = @UserID AND RoleName = @RoleName
+            )
+            BEGIN
+                INSERT INTO UserRoles (UserID, RoleName)
+                VALUES (@UserID, @RoleName);
+            END
+            """,
+            connection
+        );
+
+        command.Parameters.Add("@UserID", SqlDbType.Int).Value = userId;
+        command.Parameters.Add("@RoleName", SqlDbType.NVarChar, 50).Value = normalizedRole;
+
+        await command.ExecuteNonQueryAsync().ConfigureAwait(false);
+    }
+
+    private static async Task<IReadOnlyCollection<string>> LoadRolesAsync(
+        SqlConnection connection,
+        int userId
+    )
+    {
+        using var command = new SqlCommand(
+            """
+            SELECT RoleName
+            FROM UserRoles
+            WHERE UserID = @UserID
+            ORDER BY RoleName
+            """,
+            connection
+        );
+
+        command.Parameters.Add("@UserID", SqlDbType.Int).Value = userId;
+
+        using var reader = await command.ExecuteReaderAsync().ConfigureAwait(false);
+        var roles = new List<string>();
+        while (await reader.ReadAsync().ConfigureAwait(false))
+        {
+            roles.Add(reader.GetString(0));
+        }
+
+        return roles;
+    }
+
+    private static string NormalizeRole(string role)
+    {
+        if (string.IsNullOrWhiteSpace(role))
+        {
+            throw new ArgumentException("Role cannot be empty.", nameof(role));
+        }
+
+        return role.Trim();
+    }
 }
 
 public readonly record struct UserRecord(
@@ -86,4 +162,8 @@ public readonly record struct UserRecord(
     DateTime CreatedAt
 );
 
-public sealed record UserCredentials(UserRecord User, string PasswordHash);
+public sealed record UserCredentials(
+    UserRecord User,
+    string PasswordHash,
+    IReadOnlyCollection<string> Roles
+);

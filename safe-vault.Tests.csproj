@@ -20,8 +20,11 @@
     <Compile Include="Utils\ValidationHelper.cs" />
     <Compile Include="Services\SecureUserRepository.cs" />
     <Compile Include="Services\PasswordHasher.cs" />
+    <Compile Include="Services\RoleAuthorizationService.cs" />
     <Compile Include="Services\UserAuthenticationService.cs" />
+    <Compile Include="Tests\Fakes\FakeSecureUserRepository.cs" />
     <Compile Include="Tests\AuthServiceTests.cs" />
+    <Compile Include="Tests\RoleAuthorizationServiceTests.cs" />
     <Compile Include="Tests\TestInputValidation.cs" />
   </ItemGroup>
 </Project>

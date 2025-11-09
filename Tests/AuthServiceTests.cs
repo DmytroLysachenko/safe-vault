@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Data;
 using NUnit.Framework;
 using SafeVault.Services;
+using SafeVault.Tests.Fakes;
 
 namespace SafeVault.Tests;
 
@@ -49,26 +50,5 @@ public sealed class AuthServiceTests
         );
 
         Assert.That(() => service.HashPassword(" "), Throws.ArgumentException);
-    }
-
-    private sealed class FakeSecureUserRepository : ISecureUserRepository
-    {
-        private readonly Dictionary<string, UserCredentials> _users = new(
-            StringComparer.OrdinalIgnoreCase
-        );
-
-        public Task<UserCredentials?> GetUserCredentialsAsync(string username)
-        {
-            _users.TryGetValue(username, out var credentials);
-            return Task.FromResult<UserCredentials?>(credentials);
-        }
-
-        public Task<DataTable> SearchUsersByUsernameAsync(string searchTerm) =>
-            Task.FromResult(new DataTable());
-
-        public void SeedUser(UserRecord user, string passwordHash)
-        {
-            _users[user.Username] = new UserCredentials(user, passwordHash);
-        }
     }
 }
