@@ -1,4 +1,6 @@
 // Controllers/AdminController.cs
+using System.Security.Claims;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SafeVault.Helpers;
 using SafeVault.Services;
@@ -7,18 +9,14 @@ namespace SafeVault.Controllers;
 
 [ApiController]
 [Route("api/admin")]
+[Authorize(Roles = RoleNames.Admin)]
 public sealed class AdminController : ControllerBase
 {
     private readonly IRoleAuthorizationService _roleAuthorizationService;
-    private readonly IUserAuthenticationService _authenticationService;
 
-    public AdminController(
-        IRoleAuthorizationService roleAuthorizationService,
-        IUserAuthenticationService authenticationService
-    )
+    public AdminController(IRoleAuthorizationService roleAuthorizationService)
     {
         _roleAuthorizationService = roleAuthorizationService;
-        _authenticationService = authenticationService;
     }
 
     [HttpPost("assign-role")]
@@ -55,25 +53,9 @@ public sealed class AdminController : ControllerBase
     }
 
     [HttpGet("dashboard")]
-    public async Task<IActionResult> GetDashboardAsync(
-        [FromQuery] string? username,
-        CancellationToken cancellationToken
-    )
+    public IActionResult GetDashboardAsync()
     {
-        if (string.IsNullOrWhiteSpace(username))
-        {
-            return BadRequest(new { error = "Username is required to access the dashboard." });
-        }
-
-        var isAdmin = await _roleAuthorizationService
-            .HasRoleAsync(username, RoleNames.Admin, cancellationToken)
-            .ConfigureAwait(false);
-
-        if (!isAdmin)
-        {
-            return Forbid();
-        }
-
+        var username = User.Identity?.Name ?? "admin";
         return Ok(
             new
             {
@@ -102,46 +84,16 @@ public sealed class AdminController : ControllerBase
         return Ok(new { username, roles });
     }
 
-    [HttpPost("login-and-access")]
-    public async Task<IActionResult> LoginAndAccessAsync(
-        [FromBody] LoginRequest? request,
-        CancellationToken cancellationToken
-    )
+    [HttpGet("login-and-access")]
+    public IActionResult LoginAndAccess()
     {
-        if (
-            request is null
-            || string.IsNullOrWhiteSpace(request.Username)
-            || string.IsNullOrWhiteSpace(request.Password)
-        )
-        {
-            return BadRequest(new { error = "Username and password are required." });
-        }
-
-        var user = await _authenticationService
-            .AuthenticateAsync(request.Username, request.Password, cancellationToken)
-            .ConfigureAwait(false);
-
-        if (user is null)
-        {
-            return Unauthorized(new { error = "Invalid credentials." });
-        }
-
-        var isAdmin = await _roleAuthorizationService
-            .HasRoleAsync(user.Value.Username, RoleNames.Admin, cancellationToken)
-            .ConfigureAwait(false);
-
-        if (!isAdmin)
-        {
-            return Forbid();
-        }
-
         return Ok(
             new
             {
                 message = "Authenticated with admin access.",
-                user.UserId,
-                user.Username,
-                user.Email,
+                userId = User.FindFirstValue(ClaimTypes.NameIdentifier),
+                username = User.Identity?.Name,
+                email = User.FindFirstValue(ClaimTypes.Email),
             }
         );
     }

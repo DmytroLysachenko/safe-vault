@@ -1,4 +1,5 @@
 // Controllers/AuthController.cs
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SafeVault.Services;
 
@@ -10,16 +11,20 @@ public class AuthController : ControllerBase
 {
     private readonly IUserAuthenticationService _authenticationService;
     private readonly IRoleAuthorizationService _roleAuthorizationService;
+    private readonly ITokenService _tokenService;
 
     public AuthController(
         IUserAuthenticationService authenticationService,
-        IRoleAuthorizationService roleAuthorizationService
+        IRoleAuthorizationService roleAuthorizationService,
+        ITokenService tokenService
     )
     {
         _authenticationService = authenticationService;
         _roleAuthorizationService = roleAuthorizationService;
+        _tokenService = tokenService;
     }
 
+    [AllowAnonymous]
     [HttpPost("login")]
     public async Task<IActionResult> LoginAsync(
         [FromBody] LoginRequest? request,
@@ -45,18 +50,27 @@ public class AuthController : ControllerBase
             return Unauthorized(new { error = "Invalid username or password." });
         }
 
+        var userRecord = user.Value;
+
         var roles = await _roleAuthorizationService
-            .GetRolesAsync(user.Value.Username, cancellationToken)
+            .GetRolesAsync(userRecord.Username, cancellationToken)
             .ConfigureAwait(false);
+
+        var token = _tokenService.GenerateToken(userRecord, roles);
 
         return Ok(
             new
             {
                 message = "Login successful.",
-                user.UserId,
-                user.Username,
-                user.Email,
-                roles,
+                token = token.Token,
+                expiresAt = token.ExpiresAt,
+                user = new
+                {
+                    userRecord.UserId,
+                    userRecord.Username,
+                    userRecord.Email,
+                    roles,
+                },
             }
         );
     }

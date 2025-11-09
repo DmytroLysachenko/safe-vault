@@ -1,10 +1,12 @@
 // Controllers/FormController.cs
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SafeVault.Services;
 
 namespace SafeVault.Controllers;
 
 [ApiController]
+[AllowAnonymous]
 [Route("/")]
 public class FormController : ControllerBase
 {

@@ -8,9 +8,17 @@ namespace SafeVault.Services;
 
 public interface IRoleAuthorizationService
 {
-    Task AssignRoleAsync(string username, string role, CancellationToken cancellationToken = default);
+    Task AssignRoleAsync(
+        string username,
+        string role,
+        CancellationToken cancellationToken = default
+    );
 
-    Task<bool> HasRoleAsync(string username, string role, CancellationToken cancellationToken = default);
+    Task<bool> HasRoleAsync(
+        string username,
+        string role,
+        CancellationToken cancellationToken = default
+    );
 
     Task<IReadOnlyCollection<string>> GetRolesAsync(
         string username,
@@ -34,7 +42,8 @@ public sealed class RoleAuthorizationService : IRoleAuthorizationService
         CancellationToken cancellationToken = default
     )
     {
-        var user = await _repository.GetUserCredentialsAsync(NormalizeUsername(username))
+        var user = await _repository
+            .GetUserCredentialsAsync(NormalizeUsername(username))
             .ConfigureAwait(false);
         if (user is null)
         {
@@ -61,7 +70,8 @@ public sealed class RoleAuthorizationService : IRoleAuthorizationService
             return false;
         }
 
-        var user = await _repository.GetUserCredentialsAsync(NormalizeUsername(username))
+        var user = await _repository
+            .GetUserCredentialsAsync(NormalizeUsername(username))
             .ConfigureAwait(false);
         if (user is null)
         {
@@ -82,7 +92,8 @@ public sealed class RoleAuthorizationService : IRoleAuthorizationService
             return Array.Empty<string>();
         }
 
-        var user = await _repository.GetUserCredentialsAsync(NormalizeUsername(username))
+        var user = await _repository
+            .GetUserCredentialsAsync(NormalizeUsername(username))
             .ConfigureAwait(false);
         return user?.Roles ?? Array.Empty<string>();
     }
