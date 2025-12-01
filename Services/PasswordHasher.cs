@@ -29,6 +29,7 @@ public sealed class BcryptPasswordHasher : IPasswordHasher
 
     public string Hash(string password)
     {
+        // BCrypt with tunable work factor protects against brute force.
         if (string.IsNullOrWhiteSpace(password))
         {
             throw new ArgumentException("Password cannot be empty.", nameof(password));

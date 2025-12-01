@@ -31,6 +31,7 @@ public class AuthController : ControllerBase
         CancellationToken cancellationToken
     )
     {
+        // Fail fast on missing credentials rather than hitting the store.
         if (
             request is null
             || string.IsNullOrWhiteSpace(request.Username)
@@ -42,6 +43,7 @@ public class AuthController : ControllerBase
             );
         }
 
+        // Authenticate and fetch roles in two steps so errors remain precise.
         var user = await _authenticationService
             .AuthenticateAsync(request.Username, request.Password, cancellationToken)
             .ConfigureAwait(false);

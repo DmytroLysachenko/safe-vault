@@ -42,8 +42,9 @@ public sealed class RoleAuthorizationService : IRoleAuthorizationService
         CancellationToken cancellationToken = default
     )
     {
+        // Resolve the user first so we can fail clearly before touching roles.
         var user = await _repository
-            .GetUserCredentialsAsync(NormalizeUsername(username))
+            .GetUserCredentialsAsync(NormalizeUsername(username), cancellationToken)
             .ConfigureAwait(false);
         if (user is null)
         {
@@ -56,7 +57,9 @@ public sealed class RoleAuthorizationService : IRoleAuthorizationService
             return;
         }
 
-        await _repository.AssignRoleAsync(user.User.UserId, normalizedRole).ConfigureAwait(false);
+        await _repository
+            .AssignRoleAsync(user.User.UserId, normalizedRole, cancellationToken)
+            .ConfigureAwait(false);
     }
 
     public async Task<bool> HasRoleAsync(
@@ -71,7 +74,7 @@ public sealed class RoleAuthorizationService : IRoleAuthorizationService
         }
 
         var user = await _repository
-            .GetUserCredentialsAsync(NormalizeUsername(username))
+            .GetUserCredentialsAsync(NormalizeUsername(username), cancellationToken)
             .ConfigureAwait(false);
         if (user is null)
         {
@@ -93,7 +96,7 @@ public sealed class RoleAuthorizationService : IRoleAuthorizationService
         }
 
         var user = await _repository
-            .GetUserCredentialsAsync(NormalizeUsername(username))
+            .GetUserCredentialsAsync(NormalizeUsername(username), cancellationToken)
             .ConfigureAwait(false);
         return user?.Roles ?? Array.Empty<string>();
     }

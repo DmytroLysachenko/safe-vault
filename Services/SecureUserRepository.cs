@@ -7,10 +7,22 @@ namespace SafeVault.Services;
 
 public interface ISecureUserRepository
 {
-    Task<UserCredentials?> GetUserCredentialsAsync(string username);
-    Task<DataTable> SearchUsersByUsernameAsync(string searchTerm);
-    Task<IReadOnlyCollection<string>> GetUserRolesAsync(int userId);
-    Task AssignRoleAsync(int userId, string role);
+    Task<UserCredentials?> GetUserCredentialsAsync(
+        string username,
+        CancellationToken cancellationToken = default
+    );
+
+    Task<DataTable> SearchUsersByUsernameAsync(
+        string searchTerm,
+        CancellationToken cancellationToken = default
+    );
+
+    Task<IReadOnlyCollection<string>> GetUserRolesAsync(
+        int userId,
+        CancellationToken cancellationToken = default
+    );
+
+    Task AssignRoleAsync(int userId, string role, CancellationToken cancellationToken = default);
 }
 
 public sealed class SecureUserRepository : ISecureUserRepository
@@ -23,11 +35,15 @@ public sealed class SecureUserRepository : ISecureUserRepository
             connectionString ?? throw new ArgumentNullException(nameof(connectionString));
     }
 
-    public async Task<UserCredentials?> GetUserCredentialsAsync(string username)
+    public async Task<UserCredentials?> GetUserCredentialsAsync(
+        string username,
+        CancellationToken cancellationToken = default
+    )
     {
         using var connection = new SqlConnection(_connectionString);
-        await connection.OpenAsync().ConfigureAwait(false);
+        await connection.OpenAsync(cancellationToken).ConfigureAwait(false);
 
+        // Parameterized query ensures user lookups stay safe from injection.
         using var command = new SqlCommand(
             """
             SELECT UserID, Username, Email, CreatedAt, PasswordHash
@@ -40,9 +56,9 @@ public sealed class SecureUserRepository : ISecureUserRepository
         command.Parameters.Add("@Username", SqlDbType.NVarChar, 100).Value = username;
 
         using var reader = await command
-            .ExecuteReaderAsync(CommandBehavior.SingleRow)
+            .ExecuteReaderAsync(CommandBehavior.SingleRow, cancellationToken)
             .ConfigureAwait(false);
-        if (await reader.ReadAsync().ConfigureAwait(false))
+        if (await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
         {
             var user = new UserRecord(
                 reader.GetInt32(reader.GetOrdinal("UserID")),
@@ -53,17 +69,21 @@ public sealed class SecureUserRepository : ISecureUserRepository
 
             var passwordHash = reader.GetString(reader.GetOrdinal("PasswordHash"));
             await reader.CloseAsync().ConfigureAwait(false);
-            var roles = await LoadRolesAsync(connection, user.UserId).ConfigureAwait(false);
+            var roles = await LoadRolesAsync(connection, user.UserId, cancellationToken)
+                .ConfigureAwait(false);
             return new UserCredentials(user, passwordHash, roles);
         }
 
         return null;
     }
 
-    public async Task<DataTable> SearchUsersByUsernameAsync(string searchTerm)
+    public async Task<DataTable> SearchUsersByUsernameAsync(
+        string searchTerm,
+        CancellationToken cancellationToken = default
+    )
     {
         using var connection = new SqlConnection(_connectionString);
-        await connection.OpenAsync().ConfigureAwait(false);
+        await connection.OpenAsync(cancellationToken).ConfigureAwait(false);
 
         using var command = new SqlCommand(
             """
@@ -77,24 +97,32 @@ public sealed class SecureUserRepository : ISecureUserRepository
 
         command.Parameters.Add("@SearchTerm", SqlDbType.NVarChar, 100).Value = $"%{searchTerm}%";
 
+        cancellationToken.ThrowIfCancellationRequested();
         using var adapter = new SqlDataAdapter(command);
         var results = new DataTable();
         adapter.Fill(results);
         return results;
     }
 
-    public async Task<IReadOnlyCollection<string>> GetUserRolesAsync(int userId)
+    public async Task<IReadOnlyCollection<string>> GetUserRolesAsync(
+        int userId,
+        CancellationToken cancellationToken = default
+    )
     {
         using var connection = new SqlConnection(_connectionString);
-        await connection.OpenAsync().ConfigureAwait(false);
-        return await LoadRolesAsync(connection, userId).ConfigureAwait(false);
+        await connection.OpenAsync(cancellationToken).ConfigureAwait(false);
+        return await LoadRolesAsync(connection, userId, cancellationToken).ConfigureAwait(false);
     }
 
-    public async Task AssignRoleAsync(int userId, string role)
+    public async Task AssignRoleAsync(
+        int userId,
+        string role,
+        CancellationToken cancellationToken = default
+    )
     {
         var normalizedRole = NormalizeRole(role);
         using var connection = new SqlConnection(_connectionString);
-        await connection.OpenAsync().ConfigureAwait(false);
+        await connection.OpenAsync(cancellationToken).ConfigureAwait(false);
 
         using var command = new SqlCommand(
             """
@@ -114,12 +142,13 @@ public sealed class SecureUserRepository : ISecureUserRepository
         command.Parameters.Add("@UserID", SqlDbType.Int).Value = userId;
         command.Parameters.Add("@RoleName", SqlDbType.NVarChar, 50).Value = normalizedRole;
 
-        await command.ExecuteNonQueryAsync().ConfigureAwait(false);
+        await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
     }
 
     private static async Task<IReadOnlyCollection<string>> LoadRolesAsync(
         SqlConnection connection,
-        int userId
+        int userId,
+        CancellationToken cancellationToken = default
     )
     {
         using var command = new SqlCommand(
@@ -134,9 +163,9 @@ public sealed class SecureUserRepository : ISecureUserRepository
 
         command.Parameters.Add("@UserID", SqlDbType.Int).Value = userId;
 
-        using var reader = await command.ExecuteReaderAsync().ConfigureAwait(false);
+        using var reader = await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
         var roles = new List<string>();
-        while (await reader.ReadAsync().ConfigureAwait(false))
+        while (await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
         {
             roles.Add(reader.GetString(0));
         }

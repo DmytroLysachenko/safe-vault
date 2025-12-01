@@ -12,6 +12,7 @@ public sealed class UserSubmissionService : IUserSubmissionService
 {
     public SubmissionValidationResult Validate(UserSubmission submission)
     {
+        // Sanitize incoming fields aggressively before checking basic rules.
         var sanitizedUsername = InputSanitizer.Sanitize(submission.Username);
         if (sanitizedUsername.Length < 3)
         {

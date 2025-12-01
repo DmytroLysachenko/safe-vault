@@ -7,6 +7,7 @@ namespace SafeVault.Utils;
 
 public static class ValidationHelpers
 {
+    // Quick heuristics for catching obvious XSS markers before DB/network work.
     private static readonly HashSet<string> XssIndicators = new(StringComparer.OrdinalIgnoreCase)
     {
         "<script",

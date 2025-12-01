@@ -6,6 +6,7 @@ namespace SafeVault.Utils;
 
 public static class InputSanitizer
 {
+    // Tight regex set strips control chars, markup delimiters, and common SQL/XSS tokens.
     private static readonly Regex ControlChars = new(
         @"[\u0000-\u001F\u007F]",
         RegexOptions.Compiled

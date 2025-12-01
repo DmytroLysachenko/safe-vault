@@ -12,6 +12,7 @@ namespace SafeVault.Controllers;
 [Authorize(Roles = RoleNames.Admin)]
 public sealed class AdminController : ControllerBase
 {
+    // Admin-only management endpoints.
     private readonly IRoleAuthorizationService _roleAuthorizationService;
 
     public AdminController(IRoleAuthorizationService roleAuthorizationService)

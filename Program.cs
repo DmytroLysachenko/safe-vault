@@ -12,6 +12,7 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
+// Bind JWT settings early so auth middleware is fully configured at startup.
 builder.Services.Configure<JwtOptions>(builder.Configuration.GetSection("Jwt"));
 var jwtOptions =
     builder.Configuration.GetSection("Jwt").Get<JwtOptions>()
@@ -48,6 +49,7 @@ builder
 
 builder.Services.AddAuthorization();
 
+// Core application services.
 builder.Services.AddSingleton<IUserSubmissionService, UserSubmissionService>();
 builder.Services.AddScoped<IUserAuthenticationService, UserAuthenticationService>();
 builder.Services.AddScoped<IRoleAuthorizationService, RoleAuthorizationService>();
@@ -79,6 +81,7 @@ else
     app.UseHsts();
 }
 
+// Order middleware to ensure authentication runs before controllers.
 app.UseHttpsRedirection();
 app.UseRouting();
 app.UseAuthentication();

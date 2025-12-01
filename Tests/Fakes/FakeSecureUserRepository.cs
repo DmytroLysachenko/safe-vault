@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Linq;
+using System.Threading;
 using SafeVault.Services;
 
 namespace SafeVault.Tests.Fakes;
@@ -12,7 +13,10 @@ public sealed class FakeSecureUserRepository : ISecureUserRepository
         StringComparer.OrdinalIgnoreCase
     );
 
-    public Task<UserCredentials?> GetUserCredentialsAsync(string username)
+    public Task<UserCredentials?> GetUserCredentialsAsync(
+        string username,
+        CancellationToken cancellationToken = default
+    )
     {
         if (string.IsNullOrWhiteSpace(username))
         {
@@ -27,10 +31,16 @@ public sealed class FakeSecureUserRepository : ISecureUserRepository
         return Task.FromResult<UserCredentials?>(null);
     }
 
-    public Task<DataTable> SearchUsersByUsernameAsync(string searchTerm) =>
+    public Task<DataTable> SearchUsersByUsernameAsync(
+        string searchTerm,
+        CancellationToken cancellationToken = default
+    ) =>
         Task.FromResult(new DataTable());
 
-    public Task<IReadOnlyCollection<string>> GetUserRolesAsync(int userId)
+    public Task<IReadOnlyCollection<string>> GetUserRolesAsync(
+        int userId,
+        CancellationToken cancellationToken = default
+    )
     {
         var entry = FindByUserId(userId);
         return Task.FromResult<IReadOnlyCollection<string>>(
@@ -38,7 +48,11 @@ public sealed class FakeSecureUserRepository : ISecureUserRepository
         );
     }
 
-    public Task AssignRoleAsync(int userId, string role)
+    public Task AssignRoleAsync(
+        int userId,
+        string role,
+        CancellationToken cancellationToken = default
+    )
     {
         if (string.IsNullOrWhiteSpace(role))
         {

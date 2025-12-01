@@ -1,4 +1,5 @@
 // Controllers/FormController.cs
+using System.Text.Json;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SafeVault.Services;
@@ -10,6 +11,7 @@ namespace SafeVault.Controllers;
 [Route("/")]
 public class FormController : ControllerBase
 {
+    // Limit the incoming content types to predictable, validated formats.
     private static readonly string[] SupportedContentTypes =
     {
         "application/json",
@@ -35,6 +37,7 @@ public class FormController : ControllerBase
             return NotFound(new { error = "Form file not found." });
         }
 
+        // Serve the static HTML form without touching user input.
         return PhysicalFile(formPath, "text/html; charset=utf-8");
     }
 
@@ -43,17 +46,18 @@ public class FormController : ControllerBase
     public async Task<IActionResult> SubmitAsync()
     {
         var submission = await ReadSubmissionAsync().ConfigureAwait(false);
-        if (submission is null)
+        if (submission.Submission is null)
         {
             return BadRequest(
                 new
                 {
-                    error = $"Unsupported content type. Supported types: {string.Join(", ", SupportedContentTypes)}",
+                    error = submission.ErrorMessage
+                        ?? $"Unsupported content type. Supported types: {string.Join(", ", SupportedContentTypes)}",
                 }
             );
         }
 
-        var validationResult = _submissionService.Validate(submission);
+        var validationResult = _submissionService.Validate(submission.Submission);
         if (!validationResult.IsValid || validationResult.Sanitized is null)
         {
             return BadRequest(new { error = validationResult.ErrorMessage });
@@ -69,12 +73,12 @@ public class FormController : ControllerBase
         );
     }
 
-    private async Task<UserSubmission?> ReadSubmissionAsync()
+    private async Task<SubmissionReadResult> ReadSubmissionAsync()
     {
         if (Request.HasFormContentType)
         {
             var form = await Request.ReadFormAsync().ConfigureAwait(false);
-            return new UserSubmission(form["username"], form["email"]);
+            return SubmissionReadResult.Success(new UserSubmission(form["username"], form["email"]));
         }
 
         if (
@@ -84,14 +88,25 @@ public class FormController : ControllerBase
         {
             try
             {
-                return await Request.ReadFromJsonAsync<UserSubmission>().ConfigureAwait(false);
+                var body = await Request.ReadFromJsonAsync<UserSubmission>().ConfigureAwait(false);
+                return body is null
+                    ? SubmissionReadResult.Failure("Request body is missing or empty.")
+                    : SubmissionReadResult.Success(body);
             }
-            catch (System.Text.Json.JsonException)
+            catch (JsonException)
             {
-                return null;
+                return SubmissionReadResult.Failure("Malformed JSON payload.");
             }
         }
 
-        return null;
+        return SubmissionReadResult.Failure(
+            $"Unsupported content type. Supported types: {string.Join(", ", SupportedContentTypes)}"
+        );
     }
+}
+
+internal readonly record struct SubmissionReadResult(UserSubmission? Submission, string? ErrorMessage)
+{
+    public static SubmissionReadResult Success(UserSubmission submission) => new(submission, null);
+    public static SubmissionReadResult Failure(string error) => new(null, error);
 }

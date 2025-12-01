@@ -39,8 +39,9 @@ public sealed class UserAuthenticationService : IUserAuthenticationService
             return null;
         }
 
+        // Pull stored credentials and verify using the configured password hasher.
         var credentials = await _repository
-            .GetUserCredentialsAsync(username.Trim())
+            .GetUserCredentialsAsync(username.Trim(), cancellationToken)
             .ConfigureAwait(false);
         if (credentials is null)
         {

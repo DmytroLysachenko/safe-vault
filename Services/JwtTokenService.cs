@@ -38,6 +38,7 @@ public sealed class JwtTokenService : ITokenService
 
     public AuthToken GenerateToken(UserRecord user, IReadOnlyCollection<string> roles)
     {
+        // Build identity claims so downstream APIs can authorize by user id and role.
         var claims = new List<Claim>
         {
             new(JwtRegisteredClaimNames.Sub, user.UserId.ToString()),
